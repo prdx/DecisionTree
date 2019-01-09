@@ -1,6 +1,5 @@
 package com.cs6140.homework;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -23,6 +22,11 @@ public class Data
         this.X = X;
         this.Y = Y;
         this.dataset = combineXAndY();
+    }
+
+    public void setDataset(double[][] dataset) {
+        this.dataset = dataset;
+        splitDataIntoXAndY();
     }
 
     public double[][] getDataset()

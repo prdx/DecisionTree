@@ -24,4 +24,5 @@ public class Impurity {
 
         return meanSquaredError;
     }
+
 }

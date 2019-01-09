@@ -16,77 +16,22 @@ public class RegressionTree
 
     public RegressionTree(int maxDepth,  int minSamplesPerNode)
     {
-        this.maxDepth = maxDepth;
-        this.minSamplesPerNode = minSamplesPerNode;
+        RegressionTree.maxDepth = maxDepth;
+        RegressionTree.minSamplesPerNode = minSamplesPerNode;
     }
 
-    public Node fit(double[][] _data)
+    private static void makeChild(Node parent, ArrayDeque<Node> nodeQueue, double[][] _data)
     {
         Data data = new Data(_data);
-        this.X = data.getX();
-        this.Y = data.getY();
-        this.data = data.getDataset();
+        double[][] X = data.getX();
+        double[] Y = data.getY();
 
-        // Root node
-        Node root = new Node(X, Y);
-        ArrayDeque<Node> nodeQueue = new ArrayDeque<>();
-        nodeQueue.add(root);
+        Node child = new Node(X, Y, parent);
+        parent.addChild(child);
 
-        while(!nodeQueue.isEmpty())
-        {
-            Node currentNode = nodeQueue.remove();
-
-            if(currentNode.getDepth() <= this.maxDepth)
-            {
-                double[][] currentX = currentNode.getX();
-                double[] currentY = currentNode.getY();
-                double[][] nodeData = (new Data(currentX, currentY)).getDataset();
-
-                int[] split = getBestSplit(new Data(currentX, currentY));
-                currentNode.setIndexOfFeature(split[0]);
-                currentNode.setIndexOfRow(split[1]);
-
-
-                int indexOfFeature = split[0];
-                int indexOfRow = split[1];
-
-                Arrays.sort(this.data, new Comparator<double[]>() {
-                    @Override
-                    public int compare(double[] o1, double[] o2) {
-                        return Double.compare(o1[indexOfFeature], o2[indexOfFeature]);
-                    }
-                });
-
-                Arrays.sort(nodeData, new Comparator<double[]>() {
-                    @Override
-                    public int compare(double[] o1, double[] o2) {
-                        return Double.compare(o1[indexOfFeature], o2[indexOfFeature]);
-                    }
-                });
-
-                currentNode.setIndexOfFeature(indexOfFeature);
-                currentNode.setIndexOfRow(indexOfRow);
-                currentNode.setSplitValue(nodeData[indexOfRow][indexOfFeature]);
-
-                ArrayList<double[]> leftData = new ArrayList<double[]>();
-                ArrayList<double[]> rightData = new ArrayList<double[]>();
-
-                // Splitting
-                splitData(nodeData, split, leftData, rightData);
-
-                double[][] left = DataReader.convertArrayListMatrixToArrayMatrix(leftData);
-                double[][] right = DataReader.convertArrayListMatrixToArrayMatrix(rightData);
-
-                makeChild(currentNode, nodeQueue, left);
-                makeChild(currentNode, nodeQueue, right);
-
-                System.out.println(currentNode.toString());
-            }
-
+        if ((data.getLengthOfY() > minSamplesPerNode) && (child.getSplitDecision() > 0)) {
+            nodeQueue.add(child);
         }
-
-        this.root = root;
-        return root;
 
     }
 
@@ -130,44 +75,14 @@ public class RegressionTree
         return Y;
     }
 
-    private static void makeChild(Node parent, ArrayDeque<Node> nodeQueue, double[][] _data)
-    {
-        Data data = new Data(_data);
-        double[][] X = data.getX();
-        double[] Y = data.getY();
-
-        Node child = new Node(X, Y, parent);
-        parent.addChild(child);
-
-        if((data.getLengthOfY() > minSamplesPerNode) && (child.getMeanSquaredError() > 0))
-        {
-            nodeQueue.add(child);
-        }
-
-    }
-
-    private static void splitData(double[][] currentData, int[] bestSplit,
-                                  ArrayList<double[]> leftData, ArrayList<double[]> rightData) {
-        for (int i = 0; i < currentData.length; i++) {
-            if (i < bestSplit[1]) {
-                leftData.add(currentData[i]);
-            } else {
-                rightData.add(currentData[i]);
-            }
-        }
-    }
-
-    private static int[] getBestSplit(Data data)
+    private static int[] getBestSplit(double[][] data)
     {
         int[] indexOfFeatureAndRow = new int[2];
-        double[][] X = data.getX();
-        double[] Y = data.getY();
 
-        int numberOfFeatures = X[0].length;
-        int numberOfRows = Y.length;
+        int numberOfFeatures = data[0].length - 1;
+        int numberOfRows = data.length;
         int jump = 5;
 
-        double[][] dataset = data.getDataset();
 
         double bestMeanSquaredError = Double.POSITIVE_INFINITY;
 
@@ -175,14 +90,14 @@ public class RegressionTree
         for (int i = 0; i < numberOfFeatures; i++)
         {
             int indexOfColumn = i;
-            Arrays.sort(dataset, new Comparator<double[]>() {
+            Arrays.sort(data, new Comparator<double[]>() {
                 @Override
                 public int compare(double[] o1, double[] o2) {
                     return Double.compare(o1[indexOfColumn], o2[indexOfColumn]);
                 }
             });
 
-            for (int j = 0; j < numberOfRows; j += jump)
+            for (int j = jump; j < numberOfRows; j += jump)
             {
                 if(numberOfRows - jump >= j)
                 {
@@ -191,12 +106,12 @@ public class RegressionTree
 
                     for (int k = 0; k < left.length; k++)
                     {
-                        left[k] = dataset[k];
+                        left[k] = data[k];
                     }
 
                     for (int k = 0; k < right.length; k++)
                     {
-                        right[k] = dataset[j + k];
+                        right[k] = data[j + k];
                     }
 
                     Data leftData = new Data(left);
@@ -219,6 +134,86 @@ public class RegressionTree
         }
 
         return indexOfFeatureAndRow;
+    }
+
+    private static void splitData(double[][] currentData, int[] bestSplit,
+                                  ArrayList<double[]> leftData, ArrayList<double[]> rightData) {
+        for (int i = 0; i < currentData.length; i++) {
+            if (i < bestSplit[1]) {
+                leftData.add(currentData[i]);
+            } else {
+                rightData.add(currentData[i]);
+            }
+        }
+    }
+
+    public Node fit(double[][] _data) {
+        Data data = new Data(_data);
+        this.X = data.getX();
+        this.Y = data.getY();
+        this.data = data.getDataset();
+
+        // Root node
+        Node root = new Node(X, Y);
+        ArrayDeque<Node> nodeQueue = new ArrayDeque<>();
+        nodeQueue.add(root);
+
+        while (!nodeQueue.isEmpty()) {
+            Node currentNode = nodeQueue.remove();
+
+            if (currentNode.getDepth() <= maxDepth) {
+                double[][] currentX = currentNode.getX();
+                double[] currentY = currentNode.getY();
+                double[][] nodeData = (new Data(currentX, currentY)).getDataset();
+
+                int[] split = getBestSplit(nodeData);
+
+                currentNode.setIndexOfFeature(split[0]);
+                currentNode.setIndexOfRow(split[1]);
+
+
+                int indexOfFeature = split[0];
+                int indexOfRow = split[1];
+
+                Arrays.sort(this.data, new Comparator<double[]>() {
+                    @Override
+                    public int compare(double[] o1, double[] o2) {
+                        return Double.compare(o1[indexOfFeature], o2[indexOfFeature]);
+                    }
+                });
+
+                Arrays.sort(nodeData, new Comparator<double[]>() {
+                    @Override
+                    public int compare(double[] o1, double[] o2) {
+                        return Double.compare(o1[indexOfFeature], o2[indexOfFeature]);
+                    }
+                });
+
+                currentNode.setIndexOfFeature(indexOfFeature);
+                currentNode.setIndexOfRow(indexOfRow);
+                currentNode.setSplitValue(nodeData[indexOfRow][indexOfFeature]);
+
+                ArrayList<double[]> leftData = new ArrayList<double[]>();
+                ArrayList<double[]> rightData = new ArrayList<double[]>();
+
+                // Splitting
+                splitData(nodeData, split, leftData, rightData);
+
+                double[][] left = DataReader.convertArrayListMatrixToArrayMatrix(leftData);
+                double[][] right = DataReader.convertArrayListMatrixToArrayMatrix(rightData);
+
+                makeChild(currentNode, nodeQueue, left);
+                makeChild(currentNode, nodeQueue, right);
+
+                System.out.println(currentNode.toString());
+
+            }
+
+        }
+
+        this.root = root;
+        return root;
+
     }
 
 

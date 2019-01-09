@@ -9,7 +9,7 @@ public class Node {
     private double average;
     private double[][] X;
     private double[] Y;
-    private double meanSquaredError;
+    private double splitDecision;
     private int depth = 0;
     private int indexOfFeature = 0;
     private int indexOfRow = 0;
@@ -20,7 +20,7 @@ public class Node {
         this.X = X;
         this.Y = Y;
         this.average = DoubleStream.of(Y).sum() / Y.length;
-        this.meanSquaredError = Impurity.calculateMeanSquaredError(Y);
+        this.splitDecision = Impurity.calculateMeanSquaredError(Y);
         this.depth = this.parent == null ? 0 : this.parent.getDepth() + 1;
     }
 
@@ -31,12 +31,12 @@ public class Node {
         this.Y = Y;
         this.parent = parent;
         this.average = DoubleStream.of(Y).sum() / Y.length;
-        this.meanSquaredError = Impurity.calculateMeanSquaredError(Y);
+        this.splitDecision = Impurity.calculateMeanSquaredError(Y);
         this.depth = this.parent == null ? 0 : this.parent.getDepth() + 1;
     }
 
-    public double getMeanSquaredError() {
-        return meanSquaredError;
+    public double getSplitDecision() {
+        return splitDecision;
     }
 
     public double getAverage() {
@@ -99,6 +99,6 @@ public class Node {
         for (int i = 1; i <= depth; i++) {
             text += "|_____";
         }
-        return text + indexOfFeature + " " + indexOfRow + " " + depth + " " + meanSquaredError;
+        return text + indexOfFeature + " " + indexOfRow + " " + depth + " " + splitDecision;
     }
 }
